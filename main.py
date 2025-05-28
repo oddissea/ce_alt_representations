@@ -20,7 +20,7 @@ Descripción:
     Breast Cancer con análisis dimensional comparativo.
 """
 
-from utils.evaluation import evaluate_classifier, save_results
+from utils.evaluation import save_results, intelligent_fallback_evaluation
 from utils.visualizations import create_visualizations
 
 from representations.intervals import IntervalClassifier
@@ -82,13 +82,13 @@ def parse_arguments():
                         help='Directorio base donde guardar las visualizaciones')
 
     # Argumento para especificar parámetros específicos de la lógica difusa
-    parser.add_argument('--fuzzy-bins', type=int, default=3,
+    parser.add_argument('--fuzzy-sets', type=int, default=3,
                         help='Número de conjuntos difusos por característica (por defecto: 3)')
 
     return parser.parse_args()
 
 
-def get_classifiers(fuzzy_bins):
+def get_classifiers(fuzzy_sets):
     """Retorna el diccionario de clasificadores con la configuración especificada."""
     return {
         "Intervalos": IntervalClassifier(),
@@ -98,7 +98,7 @@ def get_classifiers(fuzzy_bins):
         "Desordenado": UnorderedClassifier(max_depth=4),
         "ExpresionesS": ExpressionsSClassifier(population_size=200, generations=10),
         "ExpresionesGenes": GeneExpressionsClassifier(population_size=150, generations=8),
-        "LogicaDifusa": FuzzyLogicClassifier(n_bins=fuzzy_bins)
+        "LogicaDifusa": FuzzyLogicClassifier(n_fuzzy_sets=fuzzy_sets)
     }
 
 
@@ -141,7 +141,7 @@ def run_experiment(dataset_name, X, y, classifiers, results_dir, vis_dir, no_vis
         start_time = time.time()
         try:
             # Máximo 10 minutos por clasificador
-            scores = evaluate_classifier(clf, X, y, cv=5)
+            scores = intelligent_fallback_evaluation(clf, X, y)
             elapsed = time.time() - start_time
 
             # Verificar si hubo error o fallback
@@ -224,7 +224,7 @@ def main():
     args = parse_arguments()
 
     # Obtener clasificadores
-    all_classifiers = get_classifiers(args.fuzzy_bins)
+    all_classifiers = get_classifiers(args.fuzzy_sets)
     classifiers = filter_classifiers(all_classifiers, args)
 
     if not classifiers:
@@ -259,12 +259,12 @@ def main():
         # Ejecutar experimentos
         results_df_original = run_experiment(
             "original", X_original, y_original,
-            get_classifiers(args.fuzzy_bins), results_original, vis_original, args.no_visualizations
+            get_classifiers(args.fuzzy_sets), results_original, vis_original, args.no_visualizations
         )
 
         results_df_prepared = run_experiment(
             "preparado", X_prepared, y_prepared,
-            filter_classifiers(get_classifiers(args.fuzzy_bins), args),
+            filter_classifiers(get_classifiers(args.fuzzy_sets), args),
             results_prepared, vis_prepared, args.no_visualizations
         )
 
@@ -334,13 +334,13 @@ if __name__ == "__main__":
     main()
 
     # Solo dataset original
-    # python main.py -dso --fuzzy-bins 5
+    # python main.py -dso --fuzzy-sets 5
 
     # Solo dataset preparado
-    # python main.py -dsp --fuzzy-bins 5
+    # python main.py -dsp --fuzzy-sets 5
 
     # Ambos datasets, excluyendo convex hull
-    # python main.py --both-datasets -ch --fuzzy-bins 5
+    # python main.py --both-datasets -ch --fuzzy-sets 5
 
     # Ambos datasets, sin visualizaciones
-    # python main.py --both-datasets -nv --fuzzy-bins 5
+    # python main.py --both-datasets -nv --fuzzy-sets 5

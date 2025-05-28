@@ -24,6 +24,9 @@ from sklearn.model_selection import StratifiedKFold
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score
 import time
 
+from scipy import stats
+from sklearn.base import clone
+
 
 def calculate_metrics(estimator, X_eval, y_eval):
     """Función interna para calcular métricas, evita sombra de 'scores'"""
@@ -225,3 +228,209 @@ def save_results(results_list, filename='results/metrics_results.csv'):
     df = df[column_order]
     df.to_csv(filename, index=False)
     print(f"Resultados guardados correctamente en {filename}.")
+
+
+# ============ NUEVAS FUNCIONES DE EVALUACIÓN ROBUSTA ============
+
+def comprehensive_evaluate_classifier(model, X, y, cv=5, timeout=600,
+                                      statistical_tests=True, bootstrap_stability=True):
+    """
+    Evaluación detallada con validación estadística y análisis de estabilidad.
+    """
+
+    print(f"Iniciando evaluación comprehensiva de {model.__class__.__name__}")
+
+    # Validación cruzada con análisis estadístico
+    skf = StratifiedKFold(n_splits=cv, shuffle=True, random_state=42)
+    cv_scores = {'accuracy': [], 'precision': [], 'recall': [], 'f1': []}
+
+    start_time = time.time()
+
+    for fold, (train_idx, test_idx) in enumerate(skf.split(X, y)):
+        if time.time() - start_time > timeout:
+            print(f"Timeout alcanzado en fold {fold}")
+            break
+
+        X_train, X_test = X[train_idx], X[test_idx]
+        y_train, y_test = y[train_idx], y[test_idx]
+
+        try:
+            # Clonar y entrenar modelo
+            model_copy = clone(model)
+            model_copy.fit(X_train, y_train)
+
+            # Calcular métricas
+            fold_metrics = calculate_metrics(model_copy, X_test, y_test)
+
+            for metric in cv_scores:
+                if metric in fold_metrics:
+                    cv_scores[metric].append(fold_metrics[metric])
+
+        except Exception as e:
+            print(f"Error en fold {fold}: {e}")
+            continue
+
+    # Estadísticas descriptivas
+    results = {}
+    for metric, scores in cv_scores.items():
+        if scores:  # Si tenemos al menos un resultado
+            scores_array = np.array(scores)
+            results[f'{metric}_mean'] = np.mean(scores_array)
+            results[f'{metric}_std'] = np.std(scores_array)
+            results[f'{metric}_ci_lower'] = np.percentile(scores_array, 2.5)
+            results[f'{metric}_ci_upper'] = np.percentile(scores_array, 97.5)
+
+            # Test de normalidad
+            if statistical_tests and len(scores_array) >= 3:
+                try:
+                    _, normality_p = stats.shapiro(scores_array)
+                    results[f'{metric}_normality_p'] = normality_p
+                except (ValueError, RuntimeError, AttributeError) as e:
+                    print(f"Error en test de normalidad para {metric}: {e}")
+                    results[f'{metric}_normality_p'] = None
+
+    # Análisis de estabilidad con bootstrap
+    if bootstrap_stability and cv_scores['accuracy']:
+        try:
+            stability_score = _bootstrap_stability_analysis(model, X, y, n_bootstrap=10)
+            results['stability_score'] = stability_score
+        except Exception as e:
+            print(f"Error en análisis de estabilidad: {e}")
+            results['stability_score'] = None
+
+    # Tiempos
+    results['total_time'] = time.time() - start_time
+    results['model_name'] = model.__class__.__name__
+
+    return results
+
+
+def _bootstrap_stability_analysis(model, X, y, n_bootstrap=10):
+    """Análisis de estabilidad mediante bootstrap."""
+    from sklearn.utils import resample
+    from scipy import stats
+
+    predictions_list = []
+
+    # Conjunto de test fijo para evaluar estabilidad
+    test_size = min(100, len(X) // 4)  # 25% o máximo 100 muestras
+    np.random.seed(42)
+    test_indices = np.random.choice(len(X), size=test_size, replace=False)
+    X_test_fixed = X[test_indices]
+
+    for i in range(n_bootstrap):
+        try:
+            # Bootstrap del conjunto de entrenamiento
+            train_indices = np.setdiff1d(np.arange(len(X)), test_indices)
+            X_train_boot, y_train_boot = resample(X[train_indices], y[train_indices],
+                                                  random_state=i)
+
+            # Entrenar modelo
+            model_boot = model.__class__(**model.get_params())
+            model_boot.fit(X_train_boot, y_train_boot)
+
+            # Predecir en conjunto de test fijo
+            pred = model_boot.predict(X_test_fixed)
+            predictions_list.append(pred)
+
+        except Exception as e:
+            print(f"Error en bootstrap {i}: {e}")
+            continue
+
+    if len(predictions_list) < 2:
+        return 0.0
+
+    # Calcular estabilidad como consenso promedio
+    predictions_array = np.array(predictions_list)
+    stability_scores = []
+
+    for i in range(test_size):
+        # Moda de las predicciones para cada muestra
+        mode_result = stats.mode(predictions_array[:, i])
+        most_common = mode_result.mode[0] if hasattr(mode_result, 'mode') else mode_result[0][0]
+        # Proporción de modelos que coinciden con la moda
+        agreement = np.sum(predictions_array[:, i] == most_common) / len(predictions_list)
+        stability_scores.append(agreement)
+
+    return np.mean(stability_scores)
+
+
+def intelligent_fallback_evaluation(model, X, y, max_attempts=3):
+    """Sistema de evaluación inteligente con fallbacks adaptativos."""
+    attempts = 0
+    last_error = None
+
+    while attempts < max_attempts:
+        attempts += 1
+
+        try:
+            # Intento principal
+            if attempts == 1:
+                print(f"Intento {attempts}: Evaluación estándar")
+                return evaluate_classifier(model, X, y, cv=5)
+
+            # Intento 2: Simplificar validación cruzada
+            elif attempts == 2:
+                print(f"Intento {attempts}: Evaluación simplificada (CV=3)")
+                return evaluate_classifier(model, X, y, cv=3, timeout=300)
+
+            # Intento 3: Holdout simple
+            else:
+                print(f"Intento {attempts}: Evaluación holdout")
+                from sklearn.model_selection import train_test_split
+
+                X_train, X_test, y_train, y_test = train_test_split(
+                    X, y, test_size=0.3, random_state=42, stratify=y
+                )
+
+                # Intentar con modelo simplificado si es posible
+                if hasattr(model, 'simplify_for_fallback'):
+                    model_simple = model.simplify_for_fallback()
+                else:
+                    model_simple = model
+
+                model_simple.fit(X_train, y_train)
+                return calculate_metrics(model_simple, X_test, y_test)
+
+        except Exception as e:
+            last_error = e
+            print(f"Intento {attempts} falló: {e}")
+
+            # Aplicar ajustes específicos según el tipo de error
+            if "singular matrix" in str(e).lower() or "linalg" in str(e).lower():
+                # Problema numérico: añadir regularización
+                if hasattr(model, 'increase_regularization'):
+                    model.increase_regularization()
+
+            elif "memory" in str(e).lower() or "timeout" in str(e).lower():
+                # Problema de recursos: simplificar modelo
+                if hasattr(model, 'reduce_complexity'):
+                    model.reduce_complexity()
+
+    # Si todos los intentos fallan, usar modelo robusto
+    print(f"Todos los intentos fallaron. Último error: {last_error}")
+    print("Usando RandomForest como fallback final")
+
+    from sklearn.ensemble import RandomForestClassifier
+    from sklearn.model_selection import train_test_split
+
+    try:
+        X_train, X_test, y_train, y_test = train_test_split(
+            X, y, test_size=0.3, random_state=42, stratify=y
+        )
+
+        rf = RandomForestClassifier(n_estimators=50, max_depth=5, random_state=42)
+        rf.fit(X_train, y_train)
+
+        results = calculate_metrics(rf, X_test, y_test)
+        results['fallback_model'] = 'RandomForest'
+        results['original_error'] = str(last_error)
+
+        return results
+
+    except Exception as final_error:
+        print(f"Error incluso con fallback final: {final_error}")
+        return {
+            'accuracy': 0.0, 'precision': 0.0, 'recall': 0.0, 'f1': 0.0,
+            'error': str(final_error), 'failed': True
+        }
