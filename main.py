@@ -438,3 +438,6 @@ if __name__ == "__main__":
 
     # test específico para hiperelipsoides
     # python main.py --both-datasets -i -ch -nn -u -es -ge -fl
+
+    # test específico para redes neuronales
+    # python main.py --both-datasets -i -he -ch -u -es -ge -fl
