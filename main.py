@@ -432,3 +432,9 @@ if __name__ == "__main__":
 
     # Test específico de envolturas convexas
     # python test/test_all_representations.py --representations EnvolturasConvexas
+
+    # test específico para los intervalos
+    # python main.py --both-datasets -he -ch -nn -u -es -ge -fl
+
+    # test específico para hiperelipsoides
+    # python main.py --both-datasets -i -ch -nn -u -es -ge -fl
