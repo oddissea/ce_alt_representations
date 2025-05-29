@@ -4,20 +4,24 @@
 main.py
 
 COMPUTACIÓN EVOLUTIVA
-PEC 4: Prueba de evaluación continua 4 - Representaciones Alternativas de Reglas
+PEC 4: Script principal CORREGIDO para experimentos de representaciones alternativas
 Máster en Investigación en Inteligencia Artificial
 Universidad Nacional de Educación a Distancia (UNED)
 
 Autor: Fernando H. Nasser-Eddine López
 Email: fnassered1@alumno.uned.es
 Fecha: 31/05/2025
-Versión: 1.0
+Versión: 2.0 - Corregido
 
 Descripción:
-    Script principal para la comparación experimental de representaciones
+    Script principal corregido para la comparación experimental de representaciones
     alternativas de reglas en sistemas clasificadores evolutivos.
-    Evalúa ocho paradigmas representacionales sobre el dataset Wisconsin
-    Breast Cancer con análisis dimensional comparativo.
+
+    CORRECCIONES IMPLEMENTADAS:
+    - Filtrado consistente de argumentos de línea de comandos
+    - Separación de validaciones específicas a archivos test/
+    - Lógica simplificada y clara para experimentos principales
+    - Eliminación de validaciones automáticas en experimento principal
 """
 
 from utils.evaluation import save_results, intelligent_fallback_evaluation
@@ -28,7 +32,7 @@ from representations.hyperellipsoids import HyperEllipsoidClassifier
 from representations.convex_hulls import ConvexHullClassifier
 from representations.neural_network import NeuralNetworkClassifier
 from representations.unordered import UnorderedClassifier
-from representations.expressions_s import ExpressionsSClassifier
+from representations.expressions_s import PureExpressionsSClassifier as ExpressionsSClassifier
 from representations.gene_expressions import GeneExpressionsClassifier
 from representations.fuzzy_logic import FuzzyLogicClassifier
 
@@ -88,23 +92,28 @@ def parse_arguments():
     return parser.parse_args()
 
 
-def get_classifiers(fuzzy_sets):
-    """Retorna el diccionario de clasificadores con la configuración especificada."""
+def get_all_classifiers(fuzzy_sets):
+    """Retorna el diccionario completo de clasificadores con la configuración especificada."""
     return {
         "Intervalos": IntervalClassifier(),
         "Hiperelipsoides": HyperEllipsoidClassifier(),
-        "EnvolturasConvexas": ConvexHullClassifier(n_components=5),
+        "EnvolturasConvexas": ConvexHullClassifier(n_components=5, parsimony_weight=0.02),
         "RedNeuronal": NeuralNetworkClassifier(hidden_layer_sizes=(20, 10), max_iter=200),
         "Desordenado": UnorderedClassifier(max_depth=4),
-        "ExpresionesS": ExpressionsSClassifier(population_size=200, generations=10),
+        "ExpresionesS": ExpressionsSClassifier(population_size=30, generations=50, max_depth=4),
         "ExpresionesGenes": GeneExpressionsClassifier(population_size=150, generations=8),
         "LogicaDifusa": FuzzyLogicClassifier(n_fuzzy_sets=fuzzy_sets)
     }
 
 
-def filter_classifiers(all_classifiers, args):
-    """Filtra los clasificadores según los argumentos de línea de comandos."""
+def filter_classifiers_by_args(all_classifiers, args):
+    """
+    Filtra los clasificadores según los argumentos de línea de comandos.
+
+    CORRECCIÓN: Esta función ahora se aplica consistentemente a ambos datasets.
+    """
     classifiers = {}
+
     if not args.skip_intervals:
         classifiers["Intervalos"] = all_classifiers["Intervalos"]
     if not args.skip_hyperellipsoids:
@@ -125,8 +134,12 @@ def filter_classifiers(all_classifiers, args):
     return classifiers
 
 
-def run_experiment(dataset_name, X, y, classifiers, results_dir, vis_dir, no_visualizations):
-    """Ejecuta el experimento completo para un dataset específico."""
+def run_single_dataset_experiment(dataset_name, X, y, classifiers, results_dir, vis_dir, no_visualizations):
+    """
+    Ejecuta el experimento para un dataset específico.
+
+    CORRECCIÓN: Función simplificada sin validaciones automáticas.
+    """
     print(f"\n{'=' * 60}")
     print(f"EJECUTANDO EXPERIMENTO CON DATASET {dataset_name.upper()}")
     print(f"Dataset: {X.shape[0]} muestras, {X.shape[1]} características")
@@ -179,12 +192,9 @@ def run_experiment(dataset_name, X, y, classifiers, results_dir, vis_dir, no_vis
             if 'roc_auc' in result:
                 result['AUC'] = result.pop('roc_auc')
             # Eliminar marcadores internos si existen
-            if 'fallback' in result:
-                result.pop('fallback')
-            if 'error' in result:
-                result.pop('error')
-            if 'failed' in result:
-                result.pop('failed')
+            result.pop('fallback', None)
+            result.pop('error', None)
+            result.pop('failed', None)
 
         results_df = pd.DataFrame(results)
         results_df = results_df.sort_values(by='Exactitud', ascending=False)
@@ -219,25 +229,88 @@ def run_experiment(dataset_name, X, y, classifiers, results_dir, vis_dir, no_vis
         return None
 
 
+def create_comparison_table(results_original, results_prepared, output_dir):
+    """
+    Crea tabla de comparación entre datasets original y preparado.
+
+    CORRECCIÓN: Función separada y simplificada.
+    """
+    if results_original is None or results_prepared is None:
+        print("⚠️ No se pueden crear comparaciones - faltan resultados de algún dataset")
+        return None
+
+    # Identificar representaciones comunes
+    models_original = set(results_original['Modelo'].values)
+    models_prepared = set(results_prepared['Modelo'].values)
+    common_models = models_original.intersection(models_prepared)
+
+    if not common_models:
+        print("⚠️ No hay representaciones comunes entre ambos datasets")
+        return None
+
+    # Crear tabla de comparación
+    comparison_data = []
+
+    for model in common_models:
+        original_row = results_original[results_original['Modelo'] == model]
+        prepared_row = results_prepared[results_prepared['Modelo'] == model]
+
+        if not original_row.empty and not prepared_row.empty:
+            acc_original = original_row['Exactitud'].iloc[0]
+            acc_prepared = prepared_row['Exactitud'].iloc[0]
+            change = acc_prepared - acc_original
+            change_percent = (change / acc_original) * 100
+
+            comparison_data.append({
+                'Modelo': model,
+                'Exactitud_Original': acc_original,
+                'Exactitud_Preparado': acc_prepared,
+                'Cambio': change,
+                'Cambio_Porcentual': change_percent
+            })
+
+    if comparison_data:
+        comparison_df = pd.DataFrame(comparison_data)
+        comparison_df = comparison_df.sort_values('Cambio_Porcentual', ascending=False)
+
+        print("\n" + "=" * 80)
+        print("COMPARACIÓN ENTRE DATASETS")
+        print("=" * 80)
+        print(comparison_df)
+
+        # Guardar comparación
+        comparison_dir = output_dir + "_comparison"
+        os.makedirs(comparison_dir, exist_ok=True)
+        comparison_df.to_csv(os.path.join(comparison_dir, "comparison_results.csv"), index=False)
+        print(f"Tabla comparativa guardada en {comparison_dir}/comparison_results.csv")
+
+        return comparison_df
+
+    return None
+
+
 def main():
     # Procesar argumentos de línea de comandos
     args = parse_arguments()
 
-    # Obtener clasificadores
-    all_classifiers = get_classifiers(args.fuzzy_sets)
-    classifiers = filter_classifiers(all_classifiers, args)
+    # Obtener todos los clasificadores
+    all_classifiers = get_all_classifiers(args.fuzzy_sets)
+
+    # CORRECCIÓN: Aplicar filtrado consistentemente
+    classifiers = filter_classifiers_by_args(all_classifiers, args)
 
     if not classifiers:
         print("Error: No hay clasificadores seleccionados. Todos han sido omitidos.")
         return
 
+    print(f"Clasificadores seleccionados: {list(classifiers.keys())}")
+
     # Determinar qué datasets ejecutar
     if args.both_datasets:
-        # Ejecutar con ambos datasets
         print("Ejecutando experimentos con ambos datasets...")
 
         # Dataset original
-        print("Cargando dataset original...")
+        print("\nCargando dataset original...")
         from data.breast_cancer_dataset import load_full_dataset
         X_original, y_original = load_full_dataset()
 
@@ -247,53 +320,43 @@ def main():
         X_prepared, y_prepared = load_prepared_dataset()
 
         # Crear directorios
-        results_original = args.output_dir
-        results_prepared = args.output_dir + "_reduced"
-        vis_original = args.visualizations_dir
-        vis_prepared = args.visualizations_dir + "_reduced"
+        results_original_dir = args.output_dir
+        results_prepared_dir = args.output_dir + "_reduced"
+        vis_original_dir = args.visualizations_dir
+        vis_prepared_dir = args.visualizations_dir + "_reduced"
 
-        for dir_path in [results_original, results_prepared, vis_original, vis_prepared]:
-            if not os.path.exists(dir_path):
-                os.makedirs(dir_path)
+        for dir_path in [results_original_dir, results_prepared_dir, vis_original_dir, vis_prepared_dir]:
+            os.makedirs(dir_path, exist_ok=True)
 
-        # Ejecutar experimentos
-        results_df_original = run_experiment(
+        # CORRECCIÓN: Usar clasificadores filtrados para ambos datasets
+        results_df_original = run_single_dataset_experiment(
             "original", X_original, y_original,
-            get_classifiers(args.fuzzy_sets), results_original, vis_original, args.no_visualizations
+            classifiers, results_original_dir, vis_original_dir, args.no_visualizations
         )
 
-        results_df_prepared = run_experiment(
+        results_df_prepared = run_single_dataset_experiment(
             "preparado", X_prepared, y_prepared,
-            filter_classifiers(get_classifiers(args.fuzzy_sets), args),
-            results_prepared, vis_prepared, args.no_visualizations
+            classifiers, results_prepared_dir, vis_prepared_dir, args.no_visualizations
         )
 
         # Crear tabla comparativa
-        if results_df_original is not None and results_df_prepared is not None:
-            print("\n" + "=" * 80)
-            print("COMPARACIÓN ENTRE DATASETS")
-            print("=" * 80)
+        comparison_df = create_comparison_table(results_df_original, results_df_prepared, args.output_dir)
 
-            # Merge de resultados para comparación
-            comparison_df = results_df_original[['Modelo', 'Exactitud']].merge(
-                results_df_prepared[['Modelo', 'Exactitud']],
-                on='Modelo',
-                suffixes=('_Original', '_Preparado')
-            )
-            comparison_df['Cambio'] = comparison_df['Exactitud_Preparado'] - comparison_df['Exactitud_Original']
-            comparison_df['Cambio_Porcentual'] = (comparison_df['Cambio'] / comparison_df['Exactitud_Original']) * 100
+        # Mostrar resumen final
+        print("\n" + "=" * 80)
+        print("RESUMEN FINAL")
+        print("=" * 80)
 
-            print(comparison_df)
+        if results_df_original is not None:
+            print(f"Dataset Original - Mejor resultado: {results_df_original['Exactitud'].max():.3f}")
 
-            # Guardar comparación
-            # Crear directorio de comparación y guardar
-            comparison_dir = args.output_dir + "_comparison"
-            if not os.path.exists(comparison_dir):
-                os.makedirs(comparison_dir)
+        if results_df_prepared is not None:
+            print(f"Dataset Preparado - Mejor resultado: {results_df_prepared['Exactitud'].max():.3f}")
 
-            # Guardar comparación
-            comparison_df.to_csv(os.path.join(comparison_dir, "comparison_results.csv"), index=False)
-            print(f"Tabla comparativa guardada en {comparison_dir}/comparison_results.csv")
+        if comparison_df is not None:
+            best_improvement = comparison_df['Cambio_Porcentual'].max()
+            best_model = comparison_df.loc[comparison_df['Cambio_Porcentual'].idxmax(), 'Modelo']
+            print(f"Mejor mejora: {best_model} (+{best_improvement:.1f}%)")
 
     elif args.dataset_prepared:
         # Solo dataset preparado
@@ -306,10 +369,9 @@ def main():
         results_dir = args.output_dir
         vis_dir = args.visualizations_dir
         for dir_path in [results_dir, vis_dir]:
-            if not os.path.exists(dir_path):
-                os.makedirs(dir_path)
+            os.makedirs(dir_path, exist_ok=True)
 
-        run_experiment(dataset_type, X, y, classifiers, results_dir, vis_dir, args.no_visualizations)
+        run_single_dataset_experiment(dataset_type, X, y, classifiers, results_dir, vis_dir, args.no_visualizations)
 
     else:
         # Solo dataset original (por defecto)
@@ -322,25 +384,51 @@ def main():
         results_dir = args.output_dir
         vis_dir = args.visualizations_dir
         for dir_path in [results_dir, vis_dir]:
-            if not os.path.exists(dir_path):
-                os.makedirs(dir_path)
+            os.makedirs(dir_path, exist_ok=True)
 
-        run_experiment(dataset_type, X, y, classifiers, results_dir, vis_dir, args.no_visualizations)
+        run_single_dataset_experiment(dataset_type, X, y, classifiers, results_dir, vis_dir, args.no_visualizations)
 
     print("\nProceso finalizado.")
+    print("\nNOTA: Para ejecutar validaciones específicas de representaciones, usar:")
+    print("  python test/test_expressions_s.py")
+    print("  python test/test_gene_expressions.py")
+    print("  python test/test_all_representations.py")
 
 
 if __name__ == "__main__":
     main()
 
+    # EJEMPLOS DE USO CORREGIDOS:
+
     # Solo dataset original
     # python main.py -dso --fuzzy-sets 5
 
     # Solo dataset preparado
-    # python main.py -dsp --fuzzy-sets 5
+    # python main.py -dsp
 
-    # Ambos datasets, excluyendo convex hull
+    # Ambos datasets con comparación
+    # python main.py --both-datasets --fuzzy-sets 5
+
+    # Solo expresiones de genes en ambos datasets
+    # python main.py --both-datasets -i -he -ch -nn -u -es -fl
+
+    # Experimento completo excluyendo convex hull
     # python main.py --both-datasets -ch --fuzzy-sets 5
 
-    # Ambos datasets, sin visualizaciones
-    # python main.py --both-datasets -nv --fuzzy-sets 5
+    # Sin visualizaciones para ejecución rápida
+    # python main.py --both-datasets -nv
+
+    # Ejecutar solo Expresiones
+    # python main.py --both-datasets -i -he -ch -nn -u -fl
+
+    # Ejecutar solo lógica difusa
+    # python main.py --both-datasets -i -he -ch -nn -u -es -ge
+
+    # Solo envolturas convexas en dataset original
+    # python main.py -dso -i -he -nn -u -es -ge -fl
+
+    # Solo envolturas convexas en ambos datasets
+    # python main.py --both-datasets -i -he -nn -u -es -ge -fl
+
+    # Test específico de envolturas convexas
+    # python test/test_all_representations.py --representations EnvolturasConvexas

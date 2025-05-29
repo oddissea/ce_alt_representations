@@ -40,6 +40,7 @@ class ImprovedFuzzyLogicClassifier(BaseEstimator, ClassifierMixin):
         self.rules_ = []
         self.classes_ = None
         self.n_features_ = None
+        self._bin_edges = None
         self._estimator_type = "classifier"
 
     def _create_uniform_fuzzy_set(self, data_values):
@@ -213,6 +214,7 @@ class ImprovedFuzzyLogicClassifier(BaseEstimator, ClassifierMixin):
         X, y = check_X_y(X, y)
         self.classes_ = np.unique(y)
         self.n_features_ = X.shape[1]
+        self._bin_edges = None
 
         if self.adaptive_clustering:
             self._initialize_fuzzy_sets_with_clustering(X, y)
@@ -288,6 +290,58 @@ class ImprovedFuzzyLogicClassifier(BaseEstimator, ClassifierMixin):
         """Retorna medida de complejidad del modelo."""
         return self.n_fuzzy_sets * self.n_features_ * len(self.classes_)
 
+    @staticmethod
+    def get_fuzzy_parameters(edges, set_index):
+        """Obtiene parámetros de conjunto difuso para visualización."""
+        if not edges or set_index >= len(edges):
+            return 0, 0.5, 1  # Valores por defecto
+
+        if set_index < len(edges) - 1:
+            a = edges[set_index]
+            b = (edges[set_index] + edges[set_index + 1]) / 2
+            c = edges[set_index + 1]
+            return a, b, c
+        else:
+            # Último conjunto
+            if len(edges) > 1:
+                a = edges[-2]
+                b = edges[-1]
+                c = edges[-1] + (edges[-1] - edges[-2])
+            else:
+                a = edges[0] - 0.5
+                b = edges[0]
+                c = edges[0] + 0.5
+            return a, b, c
+
+    def calculate_membership(self, x, a, b, c):
+        """Calcula pertenencia triangular para visualización."""
+        return self._triangular_membership(x, a, b, c)
+
+    @property
+    def bin_edges_(self):
+        """Proporciona bordes de bins para compatibilidad con visualización."""
+        if self._bin_edges is None:
+            self._bin_edges = {}
+            if self.n_features_ is not None:  # Solo si el modelo está entrenado
+                for feature_idx in range(self.n_features_):
+                    if feature_idx in self.fuzzy_sets_:
+                        # Usar centros de conjuntos difusos como bordes
+                        centers = []
+                        for class_label in self.classes_:
+                            if class_label in self.fuzzy_sets_[feature_idx]:
+                                centers.extend(self.fuzzy_sets_[feature_idx][class_label]['centers'])
+                        self._bin_edges[feature_idx] = sorted(list(set(centers)))
+                    else:
+                        self._bin_edges[feature_idx] = [0, 1]
+            else:
+                # Modelo no entrenado - retornar estructura vacía
+                self._bin_edges = {}
+        return self._bin_edges
+
+    @property
+    def n_bins(self):
+        """Número de bins para compatibilidad."""
+        return self.n_fuzzy_sets
 
 # Alias para compatibilidad
 FuzzyLogicClassifier = ImprovedFuzzyLogicClassifier

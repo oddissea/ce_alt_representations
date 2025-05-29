@@ -312,7 +312,7 @@ def _bootstrap_stability_analysis(model, X, y, n_bootstrap=10):
 
     predictions_list = []
 
-    # Conjunto de test fijo para evaluar estabilidad
+    # Conjunto de pruebas fijo para evaluar estabilidad
     test_size = min(100, len(X) // 4)  # 25% o máximo 100 muestras
     np.random.seed(42)
     test_indices = np.random.choice(len(X), size=test_size, replace=False)
@@ -329,7 +329,7 @@ def _bootstrap_stability_analysis(model, X, y, n_bootstrap=10):
             model_boot = model.__class__(**model.get_params())
             model_boot.fit(X_train_boot, y_train_boot)
 
-            # Predecir en conjunto de test fijo
+            # Predecir en conjunto de pruebas fijo
             pred = model_boot.predict(X_test_fixed)
             predictions_list.append(pred)
 
