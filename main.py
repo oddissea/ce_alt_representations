@@ -19,7 +19,6 @@ Descripción:
 
     CORRECCIONES IMPLEMENTADAS:
     - Filtrado consistente de argumentos de línea de comandos
-    - Separación de validaciones específicas a archivos test/
     - Lógica simplificada y clara para experimentos principales
     - Eliminación de validaciones automáticas en experimento principal
 """

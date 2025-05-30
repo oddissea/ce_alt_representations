@@ -14,8 +14,8 @@ Fecha: 31/05/2025
 Versión: 4.0 - Fidelidad Teórica Completa
 
 Descripción:
-    Implementación PURA de expresiones simbólicas S de Lisp según teoría de
-    Carmona-Galán. Opera ÚNICAMENTE sobre señales booleanas de entrada,
+    Implementación de expresiones simbólicas S de Lisp según teoría del
+    libro tema 7 (Carmona-Galán). Opera ÚNICAMENTE sobre señales booleanas de entrada,
     sin umbrales evolutivos ni binarización artificial.
 
     TEORÍA: "operadores booleanos 'and', 'or' y 'not' sobre señales de entrada

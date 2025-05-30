@@ -1,15 +1,22 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-convex_hulls.py - Algoritmo Genético Básico para Envolturas Convexas
+convex_hulls.py
+COMPUTACIÓN EVOLUTIVA
+PEC 4: Representaciones Alternativas de Reglas - VERSIÓN TEÓRICAMENTE PURA
+Máster en Investigación en Inteligencia Artificial
+Universidad Nacional de Educación a Distancia (UNED)
 
-COMPUTACIÓN EVOLUTIVA - Representación Evolutiva de Envolturas Convexas
-Implementación que resuelve los problemas identificados en la literatura:
+Autor: Fernando H. Nasser-Eddine López
+Email: fnassered1@alumno.uned.es
+Fecha: 31/05/2025
+Versión: 4.0 - Fidelidad Teórica Completa
 
-1. Dimensión variable del genotipo → Cromosomas de longitud fija
-2. Inflación de reglas → Control explícito de bloat con parsimonia
-3. Complejidad evolutiva → Operadores genéticos simples y robustos
-4. Sobredimensionamiento → Fitness que penaliza complejidad excesiva
+Descripción:
+    1. Dimensión variable del genotipo → Cromosomas de longitud fija
+    2. Inflación de reglas → Control explícito de bloat con parsimonia
+    3. Complejidad evolutiva → Operadores genéticos simples y robustos
+    4. Sobredimensionamiento → Fitness que penaliza complejidad excesiva
 
 Autor: Fernando H. Nasser-Eddine López
 """

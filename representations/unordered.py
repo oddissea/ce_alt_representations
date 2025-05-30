@@ -1,11 +1,20 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-unordered.py - REIMPLEMENTACIÓN EVOLUTIVA FIEL
+unordered.py
+COMPUTACIÓN EVOLUTIVA
+PEC 4: Prueba de evaluación continua 4 - Representaciones Alternativas de Reglas
+Máster en Investigación en Inteligencia Artificial
+Universidad Nacional de Educación a Distancia (UNED)
+
+Autor: Fernando H. Nasser-Eddine López
+Email: fnassered1@alumno.uned.es
+Fecha: 31/05/2025
+Versión: 1.0
 
 COMPUTACIÓN EVOLUTIVA
 PEC 4: Representación Desordenada según memoria.pdf sección 2.5
-Implementación fiel de cromosomas desordenados (messy chromosomes)
+Implementación de cromosomas desordenados (messy chromosomes)
 con algoritmo genético especializado según Lanzi y Goldberg.
 """
 

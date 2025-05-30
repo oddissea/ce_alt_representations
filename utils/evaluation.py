@@ -16,7 +16,7 @@ Versión: 1.0
 Descripción:
     Módulo de evaluación para sistemas clasificadores evolutivos.
     Implementa validación cruzada estratificada con cálculo de métricas
-    de rendimiento robustas y manejo de errores para experimentos comparativos.
+    de rendimiento estables y manejo de errores para experimentos comparativos.
 """
 import pandas as pd
 import numpy as np
@@ -407,7 +407,7 @@ def intelligent_fallback_evaluation(model, X, y, max_attempts=3):
                 if hasattr(model, 'reduce_complexity'):
                     model.reduce_complexity()
 
-    # Si todos los intentos fallan, usar modelo robusto
+    # Si todos los intentos fallan, usar modelo estable
     print(f"Todos los intentos fallaron. Último error: {last_error}")
     print("Usando RandomForest como fallback final")
 

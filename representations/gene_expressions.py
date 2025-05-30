@@ -11,15 +11,12 @@ Universidad Nacional de Educación a Distancia (UNED)
 Autor: Fernando H. Nasser-Eddine López
 Email: fnassered1@alumno.uned.es
 Fecha: 31/05/2025
-Versión: 4.0 - Implementación Fiel a Ferreira
+Versión: 4.0 - Implementación (Ferreira)
 
 Descripción:
     Clasificador basado en programación de expresión génica (GEP) con
-    implementación EXACTA según Ferreira. Garantiza cromosoma lineal fijo
+    implementación según Ferreira. Garantiza cromosoma lineal fijo
     → traducción a árbol legal SIEMPRE mediante algoritmo breadth-first correcto.
-
-    CORRECCIÓN CRÍTICA: Traducción, evaluación y operadores genéticos
-    completamente reimplementados según especificaciones teóricas.
 """
 
 import numpy as np
