@@ -394,10 +394,6 @@ def main():
         run_single_dataset_experiment(dataset_type, X, y, classifiers, results_dir, vis_dir, args.no_visualizations)
 
     print("\nProceso finalizado.")
-    print("\nNOTA: Para ejecutar validaciones específicas de representaciones, usar:")
-    print("  python pruebas/test_expressions_s.py")
-    print("  python pruebas/test_gene_expressions.py")
-    print("  python pruebas/test_all_representations.py")
 
 
 if __name__ == "__main__":
