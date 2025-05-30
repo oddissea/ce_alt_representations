@@ -22,14 +22,14 @@ import sys
 import os
 import numpy as np
 import time
-from sklearn.metrics import accuracy_score, mean_squared_error, r2_score
-from sklearn.datasets import make_regression, make_classification
+from sklearn.metrics import accuracy_score
+from sklearn.datasets import make_classification
 import json
 
 # Añadir path del proyecto principal
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from pruebas.validation_datasets import get_boolean_validation_datasets, create_interval_validation_datasets
+from validation_datasets import get_boolean_validation_datasets
 from representations.gene_expressions import GeneExpressionsClassifier
 
 
@@ -103,6 +103,44 @@ def create_gep_classification_datasets():
     return datasets
 
 
+def _train_and_evaluate_gep(classifier, X, y, description="Resultados"):
+    """
+    Función auxiliar para entrenar y evaluar clasificador GEP.
+
+    Parámetros:
+    - classifier: Instancia del clasificador GEP
+    - X: Datos de características
+    - y: Etiquetas objetivo
+    - description: Descripción para mostrar en resultados
+
+    Retorna:
+    - dict: Diccionario con resultados (accuracy, training_time, etc.)
+    """
+    try:
+        start_time = time.time()
+        classifier.fit(X, y)
+        training_time = time.time() - start_time
+
+        # Evaluar
+        predictions = classifier.predict(X)
+        accuracy = accuracy_score(y, predictions)
+
+        # Mostrar resultados
+        print(f"{description}:")
+        print(f"  Exactitud: {accuracy:.4f}")
+        print(f"  Tiempo: {training_time:.2f}s")
+        print(f"  Fallback: {'Sí' if getattr(classifier, 'using_fallback', True) else 'No'}")
+
+        return {
+            'accuracy': accuracy,
+            'training_time': training_time,
+            'using_fallback': getattr(classifier, 'using_fallback', True),
+        }
+
+    except Exception as e:
+        print(f"  ❌ Error: {e}")
+        return {'error': str(e)}
+
 def test_gep_on_regression():
     """
     Prueba GEP en problemas de regresión simbólica.
@@ -122,7 +160,6 @@ def test_gep_on_regression():
         print(f"Dataset: {X.shape[0]} muestras, {X.shape[1]} variables")
         print(f"Rango y: [{y.min():.3f}, {y.max():.3f}]")
 
-        # Configurar GEP para regresión
         try:
             gep_regressor = GeneExpressionsClassifier(
                 population_size=120,
@@ -132,29 +169,17 @@ def test_gep_on_regression():
             )
 
             # Simular regresión con clasificación binaria
-            y_binary = (y > np.median(y)).astype(int)
+            median_value = np.median(y)
+            y_binary = np.asarray(y > median_value, dtype=int)
 
-            start_time = time.time()
-            gep_regressor.fit(X, y_binary)
-            training_time = time.time() - start_time
-
-            # Evaluar
-            predictions = gep_regressor.predict(X)
-            accuracy = accuracy_score(y_binary, predictions)
-
-            print(f"Resultados (clasificación binaria simulada):")
-            print(f"  Exactitud: {accuracy:.4f}")
-            print(f"  Tiempo: {training_time:.2f}s")
-
-            # Obtener expresión si está disponible
-            if hasattr(gep_regressor, 'get_expression'):
-                expression = gep_regressor.get_expression()
-                print(f"  Expresión: {expression}")
+            # Usar función auxiliar
+            result = _train_and_evaluate_gep(
+                gep_regressor, X, y_binary,
+                "Resultados (clasificación binaria simulada)"
+            )
 
             results[dataset_name] = {
-                'accuracy': accuracy,
-                'training_time': training_time,
-                'using_fallback': getattr(gep_regressor, 'using_fallback', True),
+                **result,
                 'dataset_info': {
                     'n_samples': int(X.shape[0]),
                     'n_features': int(X.shape[1])
@@ -188,7 +213,6 @@ def test_gep_on_classification():
         print(f"Clases: {np.unique(y)} (distribución: {np.bincount(y)})")
 
         try:
-            # Configurar GEP
             gep_classifier = GeneExpressionsClassifier(
                 population_size=100,
                 generations=30,
@@ -196,23 +220,11 @@ def test_gep_on_classification():
                 random_state=42
             )
 
-            start_time = time.time()
-            gep_classifier.fit(X, y)
-            training_time = time.time() - start_time
-
-            # Evaluar
-            predictions = gep_classifier.predict(X)
-            accuracy = accuracy_score(y, predictions)
-
-            print(f"Resultados:")
-            print(f"  Exactitud: {accuracy:.4f}")
-            print(f"  Tiempo: {training_time:.2f}s")
-            print(f"  Fallback: {'Sí' if getattr(gep_classifier, 'using_fallback', True) else 'No'}")
+            # Usar función auxiliar
+            result = _train_and_evaluate_gep(gep_classifier, X, y, "Resultados")
 
             results[dataset_name] = {
-                'accuracy': accuracy,
-                'training_time': training_time,
-                'using_fallback': getattr(gep_classifier, 'using_fallback', True),
+                **result,
                 'dataset_info': {
                     'n_samples': int(X.shape[0]),
                     'n_features': int(X.shape[1]),
@@ -256,7 +268,6 @@ def test_gep_on_boolean_problems():
         print(f"Problema booleano: {np.all(np.isin(X, [0, 1]))}")
 
         try:
-            # Configurar GEP para problemas booleanos
             gep_boolean = GeneExpressionsClassifier(
                 population_size=80,
                 generations=25,
@@ -267,23 +278,11 @@ def test_gep_on_boolean_problems():
             # Convertir a float para GEP
             X_float = X.astype(float)
 
-            start_time = time.time()
-            gep_boolean.fit(X_float, y)
-            training_time = time.time() - start_time
-
-            # Evaluar
-            predictions = gep_boolean.predict(X_float)
-            accuracy = accuracy_score(y, predictions)
-
-            print(f"Resultados:")
-            print(f"  Exactitud: {accuracy:.4f} ({accuracy * 100:.1f}%)")
-            print(f"  Tiempo: {training_time:.2f}s")
-            print(f"  Fallback: {'Sí' if getattr(gep_boolean, 'using_fallback', True) else 'No'}")
+            # Usar función auxiliar
+            result = _train_and_evaluate_gep(gep_boolean, X_float, y, "Resultados")
 
             results[dataset_name] = {
-                'accuracy': accuracy,
-                'training_time': training_time,
-                'using_fallback': getattr(gep_boolean, 'using_fallback', True),
+                **result,
                 'dataset_info': {
                     'n_samples': int(X.shape[0]),
                     'n_features': int(X.shape[1])
@@ -331,18 +330,30 @@ def analyze_gep_implementation():
 
         # Probar creación de cromosoma
         try:
-            # Simular terminal_set
-            gep.terminal_set = ['X0', 'X1', '1.0', '0.0']
-            chromosome = gep._create_chromosome()
-            print(f"\nCromosoma de prueba creado: {len(chromosome)} genes")
-            print(f"Primeros 5 genes: {chromosome[:5]}")
+            # Verificar si tiene métodos de análisis
+            if hasattr(gep, 'evolution_engine') and gep.evolution_engine:
+                # Usar métodos públicos si están disponibles
+                if hasattr(gep.evolution_engine, 'functions') and hasattr(gep.evolution_engine, 'terminals'):
+                    print(f"\nFunciones disponibles: {gep.evolution_engine.functions}")
+                    print(
+                        f"Terminales configurados: {len(gep.evolution_engine.terminals) if gep.evolution_engine.terminals else 0}")
 
-            # Probar decodificación
-            try:
-                tree = gep._decode_chromosome(chromosome)
-                print(f"Decodificación: {'✅ Exitosa' if tree else '❌ Falló'}")
-            except Exception as decode_error:
-                print(f"Decodificación: ❌ Error - {decode_error}")
+                # Crear cromosoma usando método público si existe
+                print("\nIntentando crear cromosoma de prueba...")
+                test_chromosome = gep.create_test_chromosome() if hasattr(gep, 'create_test_chromosome') else None
+
+                if test_chromosome:
+                    print(f"Cromosoma de prueba creado: {test_chromosome.length()} genes")
+                    print(f"Representación: {test_chromosome.get_expression_string()[:50]}...")
+
+                    # Probar traducción
+                    tree = gep.decode_test_chromosome(test_chromosome) if hasattr(gep,
+                                                                                  'decode_test_chromosome') else None
+                    print(f"Traducción: {'✅ Correcta' if tree else '❌ Falló'}")
+                else:
+                    print("No se pudo crear cromosoma de prueba")
+            else:
+                print("Motor evolutivo no disponible para análisis")
 
         except Exception as chromosome_error:
             print(f"Creación cromosoma: ❌ Error - {chromosome_error}")
@@ -441,16 +452,14 @@ def run_gep_validation():
     analyze_gep_implementation()
 
     # Ejecutar validaciones
-    results = {}
-
     # Regresión simbólica
-    results['regression'] = test_gep_on_regression()
-
     # Clasificación
-    results['classification'] = test_gep_on_classification()
-
     # Problemas booleanos
-    results['boolean'] = test_gep_on_boolean_problems()
+
+    results = {'regression': test_gep_on_regression(), 'classification': test_gep_on_classification(),
+               'boolean': test_gep_on_boolean_problems()}
+
+
 
     # Comparación con Expresiones S (sin datos por ahora)
     compare_gep_vs_expressions_s(results['boolean'])

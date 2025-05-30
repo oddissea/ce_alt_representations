@@ -22,13 +22,13 @@ import sys
 import os
 import numpy as np
 import time
-from sklearn.metrics import accuracy_score, classification_report
+from sklearn.metrics import accuracy_score
 import json
 
 # Añadir path del proyecto principal
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from pruebas.validation_datasets import get_boolean_validation_datasets
+from validation_datasets import get_boolean_validation_datasets
 from representations.expressions_s import PureExpressionsSClassifier
 
 
@@ -145,11 +145,11 @@ def test_expressions_s_comprehensive():
             # Verificación de validez teórica
             print(f"\nVERIFICACIÓN TEÓRICA:")
             if not complexity.get('using_fallback', False):
-                print(f"  ✅ Implementación pura (solo operadores booleanos)")
-                print(f"  ✅ Sin umbrales evolutivos")
-                print(f"  ✅ Expresión simbólica válida")
+                print(f"  Implementación pura (solo operadores booleanos)")
+                print(f"  Sin umbrales evolutivos")
+                print(f"  Expresión simbólica válida")
             else:
-                print(f"  ⚠️ Usando modo fallback - No es expresión S pura")
+                print(f"  Usando modo fallback - No es expresión S pura")
 
             # Guardar resultados
             results[dataset_name] = {
@@ -168,7 +168,7 @@ def test_expressions_s_comprehensive():
             }
 
         except Exception as e:
-            print(f"  ❌ ERROR en validación: {e}")
+            print(f"  ERROR en validación: {e}")
             results[dataset_name] = {
                 'error': str(e),
                 'dataset_info': {
@@ -193,18 +193,18 @@ def analyze_expressions_s_performance(results):
     print("ANÁLISIS COMPARATIVO DE RENDIMIENTO")
     print("=" * 80)
 
-    # Separar resultados exitosos y fallidos
+    # Separar resultados correctos y erróneos
     successful_results = {k: v for k, v in results.items() if 'accuracy' in v}
     failed_results = {k: v for k, v in results.items() if 'error' in v}
 
     if failed_results:
         print("FALLOS DETECTADOS:")
         for dataset, error_info in failed_results.items():
-            print(f"  ❌ {dataset}: {error_info['error']}")
+            print(f"  {dataset}: {error_info['error']}")
         print()
 
     if not successful_results:
-        print("❌ No hay resultados válidos para analizar")
+        print("No hay resultados válidos para analizar")
         return
 
     # Análisis por dificultad del problema
@@ -277,7 +277,7 @@ def compare_with_breast_cancer_results(validation_results, breast_cancer_accurac
                           if 'accuracy' in v and not v.get('using_fallback', False)}
 
     if not successful_results:
-        print("❌ No hay resultados de validación válidos para comparar")
+        print("No hay resultados de validación válidos para comparar")
         return
 
     best_validation = max(r['accuracy'] for r in successful_results.values())
@@ -304,13 +304,13 @@ def compare_with_breast_cancer_results(validation_results, breast_cancer_accurac
 
         print(f"\nCONCLUSIONES CIENTÍFICAS:")
         if improvement > 5:
-            print(f"  ✅ Mejora significativa en dominio apropiado (+{improvement:.1f}pp)")
+            print(f"  Mejora significativa en dominio apropiado (+{improvement:.1f}pp)")
         else:
-            print(f"  ⚠️ Mejora moderada en dominio apropiado (+{improvement:.1f}pp)")
+            print(f"  Mejora moderada en dominio apropiado (+{improvement:.1f}pp)")
 
-        print(f"  ✅ Implementación teóricamente correcta")
-        print(f"  ✅ Rendimiento apropiado según el dominio")
-        print(f"  ✅ No hay defectos algorítmicos")
+        print(f"  Implementación teóricamente correcta")
+        print(f"  Rendimiento apropiado según el dominio")
+        print(f"  No hay defectos algorítmicos")
 
     else:
         print(f"\nNota: Sin datos de breast cancer para comparar")
@@ -318,7 +318,7 @@ def compare_with_breast_cancer_results(validation_results, breast_cancer_accurac
 
 def save_validation_results(results, output_file="pruebas/results_expressions_s.json"):
     """
-    Guarda resultados de validación en archivo JSON.
+    Guarda los resultados de validación en archivo JSON.
 
     Parámetros:
     - results: Resultados de validación
@@ -390,7 +390,7 @@ def main():
         print("\n" + "=" * 80)
         print("RESUMEN FINAL")
         print("=" * 80)
-        print(f"Validaciones exitosas: {successful}/{total}")
+        print(f"Validaciones correctas: {successful}/{total}")
 
         if successful > 0:
             accuracies = [r['accuracy'] for r in results.values() if 'accuracy' in r]
@@ -398,15 +398,15 @@ def main():
             print(f"Mejor resultado: {max(accuracies):.3f}")
 
             if successful == total:
-                print("🎉 TODAS LAS VALIDACIONES EXITOSAS")
-                print("✅ Implementación de Expresiones S validada correctamente")
+                print("TODAS LAS VALIDACIONES CORRECTAS")
+                print("Implementación de Expresiones S validada correctamente")
             else:
-                print("⚠️ Algunas validaciones fallaron - revisar implementación")
+                print("Algunas validaciones fallaron - revisar implementación")
 
         return results
 
     except Exception as e:
-        print(f"❌ Error durante validación: {e}")
+        print(f"Error durante validación: {e}")
         import traceback
         traceback.print_exc()
         return {}

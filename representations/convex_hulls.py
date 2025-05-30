@@ -441,30 +441,7 @@ class ConvexHullClassifier(BaseEstimator, ClassifierMixin):
         probabilities = np.zeros((n_samples, n_classes))
 
         for i, x in enumerate(X_reduced):
-            scores = []
-
-            for hull_dict in self.hulls_:
-                if hull_dict['method'] == 'evolved_convex':
-                    try:
-                        delaunay = hull_dict['delaunay']
-                        if delaunay.find_simplex(x) >= 0:
-                            vertices = hull_dict['vertices']
-                            centroid = np.mean(vertices, axis=0)
-                            distance = np.linalg.norm(x - centroid)
-                            score = 1.0 / (1.0 + distance)
-                        else:
-                            score = 0.0
-                    except (ValueError, RuntimeError, AttributeError):
-                        score = 0.0
-
-                elif hull_dict['method'] == 'sphere_fallback':
-                    distance = np.linalg.norm(x - hull_dict['center'])
-                    score = max(0.0, 1.0 - (distance / hull_dict['radius']))
-
-                else:
-                    score = 0.0
-
-                scores.append(score)
+            scores = [self._calculate_hull_score(hull_dict, x) for hull_dict in self.hulls_]
 
             # Normalizar probabilidades
             total_score = sum(scores)
@@ -477,6 +454,29 @@ class ConvexHullClassifier(BaseEstimator, ClassifierMixin):
                 probabilities[i, :] = 1.0 / n_classes
 
         return probabilities
+
+    @staticmethod
+    def _calculate_hull_score(hull_dict, x):
+        """Calcula score para un hull específico."""
+        if hull_dict['method'] == 'evolved_convex':
+            try:
+                delaunay = hull_dict['delaunay']
+                if delaunay.find_simplex(x) >= 0:
+                    vertices = hull_dict['vertices']
+                    centroid = np.mean(vertices, axis=0)
+                    distance = np.linalg.norm(x - centroid)
+                    return 1.0 / (1.0 + distance)
+                else:
+                    return 0.0
+            except (ValueError, RuntimeError, AttributeError):
+                return 0.0
+
+        elif hull_dict['method'] == 'sphere_fallback':
+            distance = np.linalg.norm(x - hull_dict['center'])
+            return max(0.0, 1.0 - (distance / hull_dict['radius']))
+
+        else:
+            return 0.0
 
     # Métodos de compatibilidad sklearn
 

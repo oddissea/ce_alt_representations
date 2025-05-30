@@ -20,7 +20,6 @@ Descripción:
 
 import numpy as np
 import random
-from sklearn.model_selection import train_test_split
 
 
 def create_expanded_boolean_dataset(base_patterns, n_samples=200, noise_rate=0.05, random_state=42):

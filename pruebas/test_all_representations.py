@@ -25,7 +25,7 @@ import time
 from sklearn.metrics import accuracy_score
 import json
 
-from pruebas.validation_datasets import (
+from validation_datasets import (
     get_boolean_validation_datasets,
     create_interval_validation_datasets,
     create_ellipsoid_validation_datasets,
@@ -101,19 +101,14 @@ def prepare_validation_datasets():
     Retorna:
     - dict: Datasets organizados por categoría
     """
-    datasets = {}
-
+    
     # Datasets booleanos (apropiados para Expresiones S)
-    datasets['boolean'] = get_boolean_validation_datasets()
-
     # Datasets de intervalos (apropiados para representación por intervalos)
-    datasets['interval'] = create_interval_validation_datasets()
-
     # Datasets elipsoidales (apropiados para hiperelipsoides)
-    datasets['ellipsoid'] = create_ellipsoid_validation_datasets()
-
     # Datasets difusos (apropiados para lógica difusa)
-    datasets['fuzzy'] = create_fuzzy_validation_datasets()
+    
+    datasets = {'boolean': get_boolean_validation_datasets(), 'interval': create_interval_validation_datasets(),
+                'ellipsoid': create_ellipsoid_validation_datasets(), 'fuzzy': create_fuzzy_validation_datasets()}
 
     # Datasets sintéticos adicionales
     from sklearn.datasets import make_classification, make_blobs
@@ -172,7 +167,7 @@ def test_single_representation(representation_name, config, datasets_dict, selec
 
     for category in test_categories:
         if category not in datasets_dict:
-            print(f"  ⚠️ Categoría '{category}' no disponible")
+            print(f"  Categoría '{category}' no disponible")
             continue
 
         print(f"\n--- Categoría: {category.upper()} ---")
@@ -219,7 +214,7 @@ def test_single_representation(representation_name, config, datasets_dict, selec
                 }
 
             except Exception as e:
-                print(f"  ❌ Error: {e}")
+                print(f"  Error: {e}")
                 results[f"{category}_{dataset_name}"] = {
                     'error': str(e),
                     'dataset_info': {
@@ -248,10 +243,10 @@ def analyze_representation_performance(representation_name, results):
     if failed_results:
         print(f"Fallos detectados ({len(failed_results)}):")
         for dataset, error_info in failed_results.items():
-            print(f"  ❌ {dataset}: {error_info['error'][:50]}...")
+            print(f"  {dataset}: {error_info['error'][:50]}...")
 
     if not successful_results:
-        print("❌ No hay resultados válidos para analizar")
+        print("No hay resultados válidos para analizar")
         return
 
     # Estadísticas generales
@@ -260,7 +255,7 @@ def analyze_representation_performance(representation_name, results):
     fallback_count = sum(1 for r in successful_results.values() if r.get('using_fallback', False))
 
     print(f"\nEstadísticas generales:")
-    print(f"  Tests exitosos: {len(successful_results)}")
+    print(f"  Tests correctos: {len(successful_results)}")
     print(f"  Exactitud promedio: {np.mean(accuracies):.3f}")
     print(f"  Exactitud máxima: {max(accuracies):.3f}")
     print(f"  Exactitud mínima: {min(accuracies):.3f}")
@@ -331,7 +326,7 @@ def run_comprehensive_validation(selected_representations=None, selected_categor
             analyze_representation_performance(repr_name, results)
 
         except Exception as e:
-            print(f"❌ Error validando {repr_name}: {e}")
+            print(f"Error validando {repr_name}: {e}")
             all_results[repr_name] = {'global_error': str(e)}
 
     return all_results
@@ -339,13 +334,13 @@ def run_comprehensive_validation(selected_representations=None, selected_categor
 
 def generate_comparative_report(all_results):
     """
-    Genera reporte comparativo entre todas las representaciones.
+    Genera informe comparativo entre todas las representaciones.
 
     Parámetros:
     - all_results: Resultados de todas las representaciones
     """
     print("\n" + "=" * 80)
-    print("REPORTE COMPARATIVO FINAL")
+    print("INFORME COMPARATIVO FINAL")
     print("=" * 80)
 
     # Calcular estadísticas por representación
@@ -392,7 +387,7 @@ def generate_comparative_report(all_results):
         # Estadísticas generales
         print(f"\nESTADÍSTICAS GENERALES:")
         print(f"  Representaciones probadas: {len(all_results)}")
-        print(f"  Representaciones exitosas: {len(successful_reprs)}")
+        print(f"  Representaciones correctas: {len(successful_reprs)}")
         print(f"  Tests totales: {sum(s['n_tests'] for s in successful_reprs.values())}")
         print(f"  Exactitud promedio global: {np.mean([s['avg_accuracy'] for s in successful_reprs.values()]):.3f}")
 
@@ -423,7 +418,7 @@ def generate_comparative_report(all_results):
                 print(f"  {category:15}: {best_repr} ({best_accuracy:.3f})")
 
     else:
-        print("❌ No hay resultados exitosos para comparar")
+        print("No hay resultados correctos para comparar")
 
     # Recomendaciones
     print(f"\nRECOMENDACIONES:")
@@ -446,7 +441,7 @@ def generate_comparative_report(all_results):
              if stats['status'] == 'success' and stats.get('fallback_rate', 0) < 0.2]
 
     if solid:
-        print(f"  ✅ Implementaciones sólidas: {', '.join(solid)}")
+        print(f"  Implementaciones sólidas: {', '.join(solid)}")
 
 
 def save_comprehensive_results(all_results, output_file="pruebas/results_all_representations.json"):
@@ -492,7 +487,7 @@ def main():
         # Ejecutar validación
         results = run_comprehensive_validation(args.representations, args.categories)
 
-        # Generar reporte
+        # Generar informe
         generate_comparative_report(results)
 
         # Guardar resultados
@@ -501,14 +496,14 @@ def main():
         print("\n" + "=" * 80)
         print("VALIDACIÓN INTEGRAL COMPLETADA")
         print("=" * 80)
-        print("✅ Todos los tests ejecutados")
-        print("📊 Reporte comparativo generado")
-        print("💾 Resultados guardados")
+        print("Todos los tests ejecutados")
+        print("informe comparativo generado")
+        print("Resultados guardados")
 
         return results
 
     except Exception as e:
-        print(f"❌ Error durante validación integral: {e}")
+        print(f"Error durante validación integral: {e}")
         import traceback
         traceback.print_exc()
         return {}

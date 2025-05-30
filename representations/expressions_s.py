@@ -251,7 +251,8 @@ class PureSExpressionEvolution:
 
             return operator_node
 
-    def _evaluate_fitness(self, tree, X_boolean, y_boolean):
+    @staticmethod
+    def _evaluate_fitness(tree, X_boolean, y_boolean):
         """Evalúa fitness DIRECTO para función booleana pura."""
         try:
             # Evaluar función booleana
@@ -267,7 +268,7 @@ class PureSExpressionEvolution:
             fitness = accuracy - complexity_penalty
             return max(0.0, min(1.0, fitness))
 
-        except Exception:
+        except (ValueError, RuntimeError, AttributeError):
             return 0.0
 
     def _tournament_selection(self, population, fitnesses):
@@ -275,6 +276,7 @@ class PureSExpressionEvolution:
         tournament_size = min(self.tournament_size, len(population))
         tournament_indices = random.sample(range(len(population)), tournament_size)
         tournament_fitnesses = [fitnesses[i] for i in tournament_indices]
+
         winner_idx = tournament_indices[np.argmax(tournament_fitnesses)]
         return population[winner_idx].copy()
 
@@ -481,7 +483,8 @@ class PureExpressionsSClassifier(BaseEstimator, ClassifierMixin):
         self.program_str = None
         self._estimator_type = "classifier"
 
-    def _prepare_boolean_data(self, X, y=None):
+    @staticmethod
+    def _prepare_boolean_data(X, y=None):
         """Convierte datos a formato estrictamente booleano."""
         # Para expresiones S puras, los datos DEBEN ser booleanos
         # Si no lo son, aplicamos binarización simple pero consciente
@@ -492,7 +495,8 @@ class PureExpressionsSClassifier(BaseEstimator, ClassifierMixin):
         else:
             # Binarización por mediana (método simple y determinista)
             print("ADVERTENCIA: Datos no booleanos. Aplicando binarización por mediana.")
-            X_boolean = (X > np.median(X, axis=0)).astype(bool)
+            median_values = np.median(X, axis=0)
+            X_boolean = np.asarray(X > median_values, dtype=bool)
 
         if y is not None:
             y_boolean = y.astype(int)

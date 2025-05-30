@@ -13,7 +13,6 @@ import numpy as np
 from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.ensemble import RandomForestClassifier
 import random
-from collections import defaultdict
 
 
 class MessyGene:
@@ -121,7 +120,8 @@ class UnorderedEvolutionaryEngine:
 
         return chromosome
 
-    def _evaluate_fitness(self, chromosome, X, y):
+    @staticmethod
+    def _evaluate_fitness(chromosome, X, y):
         """Evalúa fitness de cromosoma desordenado."""
         if chromosome.length() == 0:
             return 0.0
@@ -144,12 +144,12 @@ class UnorderedEvolutionaryEngine:
                 return 0.0
 
             # Precisión: proporción de instancias cubiertas que son de la clase correcta
-            correct_predictions = np.sum(y[covered_indices] == chromosome.class_label)
+            correct_predictions = int(np.sum(y[covered_indices] == chromosome.class_label))
             precision = correct_predictions / len(covered_indices)
 
             # Cobertura: proporción de instancias de la clase que son cubiertas
-            class_instances = np.sum(y == chromosome.class_label)
-            class_covered = np.sum((y[covered_indices] == chromosome.class_label))
+            class_instances = int(np.sum(y == chromosome.class_label))
+            class_covered = int(np.sum((y[covered_indices] == chromosome.class_label)))
             coverage = class_covered / max(class_instances, 1)
 
             # Fitness balanceado con bonificación por parsimonia
@@ -412,7 +412,8 @@ class UnorderedClassifier(BaseEstimator, ClassifierMixin):
 
         return np.array(predictions)
 
-    def _evaluate_rule_activation(self, rule, instance):
+    @staticmethod
+    def _evaluate_rule_activation(rule, instance):
         """Evalúa activación de regla desordenada en instancia."""
         if rule.length() == 0:
             return 0.0

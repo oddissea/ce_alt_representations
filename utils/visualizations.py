@@ -15,7 +15,7 @@ Versión: 1.0
 
 Descripción:
     Módulo de visualización para análisis comparativo de representaciones.
-    Genera gráficas de rendimiento, matrices de confusión, curvas ROC,
+    Genera gráficas de rendimiento, matrices de confusión y las curvas ROC,
     fronteras de decisión y visualizaciones específicas de reglas por
     tipo de representación en sistemas clasificadores evolutivos.
 """
@@ -80,30 +80,30 @@ def create_visualizations(classifiers, X, y, results_df, output_dir="visualizati
     except Exception as e:
         print(f"Error en gráfica de comparación de exactitud: {e}")
 
-    try:
-        plot_confusion_matrices(trained_classifiers, X, y, output_dir)
-    except Exception as e:
-        print(f"Error en matrices de confusión: {e}")
+    # try:
+    #     plot_confusion_matrices(trained_classifiers, X, y, output_dir)
+    # except Exception as e:
+    #     print(f"Error en matrices de confusión: {e}")
 
     try:
         plot_roc_curves(trained_classifiers, X, y, output_dir)
     except Exception as e:
         print(f"Error en curvas ROC: {e}")
 
-    try:
-        plot_time_vs_accuracy(filtered_results_df, output_dir)
-    except Exception as e:
-        print(f"Error en gráfica tiempo vs exactitud: {e}")
-
-    try:
-        plot_decision_boundaries(trained_classifiers, X, y, output_dir)
-    except Exception as e:
-        print(f"Error en fronteras de decisión: {e}")
-
-    try:
-        plot_rules_visualization(trained_classifiers, X, y, output_dir)
-    except Exception as e:
-        print(f"Error en visualización de reglas: {e}")
+    # try:
+    #     plot_time_vs_accuracy(filtered_results_df, output_dir)
+    # except Exception as e:
+    #     print(f"Error en gráfica tiempo vs exactitud: {e}")
+    #
+    # try:
+    #     plot_decision_boundaries(trained_classifiers, X, y, output_dir)
+    # except Exception as e:
+    #     print(f"Error en fronteras de decisión: {e}")
+    #
+    # try:
+    #     plot_rules_visualization(trained_classifiers, X, y, output_dir)
+    # except Exception as e:
+    #     print(f"Error en visualización de reglas: {e}")
 
     print(f"Visualizaciones guardadas en '{output_dir}'")
 
@@ -292,11 +292,15 @@ def plot_decision_boundaries(classifiers, X, y, output_dir, sample_size=500):
             y_sample = y
 
     # Crear malla para visualizar fronteras
-    x_min, x_max = X_pca[:, 0].min() - 1, X_pca[:, 0].max() + 1
-    y_min, y_max = X_pca[:, 1].min() - 1, X_pca[:, 1].max() + 1
-    h = 0.1  # Paso de la malla
-    xx, yy = np.meshgrid(np.arange(x_min, x_max, h),
-                         np.arange(y_min, y_max, h))
+    x_min: float = float(X_pca[:, 0].min() - 1)
+    x_max: float = float(X_pca[:, 0].max() + 1)
+    y_min: float = float(X_pca[:, 1].min() - 1)
+    y_max: float = float(X_pca[:, 1].max() + 1)
+    h: float = 0.1
+
+    xx: np.ndarray = np.arange(x_min, x_max, h)
+    yy: np.ndarray = np.arange(y_min, y_max, h)
+    xx, yy = np.meshgrid(xx, yy)
 
     # Para cada clasificador
     for name, clf in classifiers.items():
@@ -307,7 +311,6 @@ def plot_decision_boundaries(classifiers, X, y, output_dir, sample_size=500):
             clf_copy = clf.__class__(**clf.get_params())
 
             # Asegurarnos de que los datos están en el formato correcto para el entrenamiento
-            # Los datos de entrada a fit deben ser 2D
             if X_pca.ndim == 1:
                 X_pca_2d = X_pca.reshape(-1, 1)
             else:
@@ -316,9 +319,8 @@ def plot_decision_boundaries(classifiers, X, y, output_dir, sample_size=500):
             clf_copy.fit(X_pca_2d, y_sample)
 
             # Predecir en la malla
-            # Asegurarse de que los datos de la malla estén en formato 2D
-            mesh_points = np.c_[xx.ravel(), yy.ravel()]
-            Z = clf_copy.predict(mesh_points)
+            mesh_points: np.ndarray = np.c_[xx.ravel(), yy.ravel()]
+            Z: np.ndarray = clf_copy.predict(mesh_points)
             Z = Z.reshape(xx.shape)
 
             # Dibujar frontera
@@ -326,13 +328,13 @@ def plot_decision_boundaries(classifiers, X, y, output_dir, sample_size=500):
 
             # Dibujar puntos
             scatter = plt.scatter(X_pca[:, 0], X_pca[:, 1], c=y_sample,
-                                  edgecolor='k', s=50, cmap='viridis')
+                                  edgecolors='k', s=50, cmap='viridis')
 
             # Añadir colorbar
             plt.colorbar(scatter, label='Clase')
 
-            plt.xlim(xx.min(), xx.max())
-            plt.ylim(yy.min(), yy.max())
+            plt.xlim(x_min, x_max)
+            plt.ylim(y_min, y_max)
             plt.title(f'Frontera de decisión: {name}')
             plt.xlabel('Componente Principal 1' if X.shape[1] > 2 else 'Característica 1')
             plt.ylabel('Componente Principal 2' if X.shape[1] > 2 else 'Característica 2')
@@ -485,20 +487,24 @@ def _visualize_hyperellipsoid_rules(clf, X, y, name, output_dir):
             # Calcular eigenvectores y eigenvalores
             eigenvalues, eigenvectors = np.linalg.eigh(np.linalg.inv(inv_cov_2d))
 
-            # Calcular ángulo
-            angle = np.degrees(np.arctan2(eigenvectors[1, 0], eigenvectors[0, 0]))
+            # Calcular ángulo con manejo de errores
+            try:
+                angle = float(np.degrees(np.arctan2(eigenvectors[1, 0], eigenvectors[0, 0])))
+            except (IndexError, TypeError):
+                angle = 0.0  # Ángulo por defecto
 
             # Crear elipse
             ellipse = Ellipse(
                 xy=center,
-                width=2 * np.sqrt(eigenvalues[0]) * ellipsoid['threshold'],
-                height=2 * np.sqrt(eigenvalues[1]) * ellipsoid['threshold'],
+                width=float(2 * np.sqrt(eigenvalues[0]) * ellipsoid['threshold']),
+                height=float(2 * np.sqrt(eigenvalues[1]) * ellipsoid['threshold']),
                 angle=angle,
                 fill=False,
                 edgecolor=f'C{i}',
                 linewidth=2,
                 label=f"Regla Clase {ellipsoid['class']}"
             )
+
             plt.gca().add_artist(ellipse)
 
     plt.xlabel(f'Característica {top_features[0]}')
@@ -558,52 +564,6 @@ def _visualize_fuzzy_rules(clf, X, name, output_dir):
 
     # Guardar y cerrar figura
     _save_figure(output_dir, f'fuzzy_rules_{name}')
-
-
-def _visualize_unordered_rules(clf, name, output_dir):
-    """
-    Visualiza reglas basadas en representación desordenada.
-
-    Parámetros:
-    - clf: El clasificador con atributo feature_importances_
-    - name: Nombre del clasificador
-    - output_dir: Directorio de salida para guardar visualizaciones
-    """
-    if not hasattr(clf, 'feature_importances_') or clf.feature_importances_ is None:
-        return
-
-    # Graficar importancia de características
-    plt.figure(figsize=(12, 6))
-
-    # Obtener índices ordenados por importancia
-    indices = np.argsort(clf.feature_importances_)[::-1]
-    n_features = min(10, len(indices))  # Mostrar top 10 características
-
-    # Crear gráfico de barras
-    plt.bar(range(n_features), clf.feature_importances_[indices[:n_features]])
-    plt.xticks(range(n_features), indices[:n_features])
-
-    plt.xlabel('Índice de característica')
-    plt.ylabel('Importancia')
-    plt.title(f'Importancia de características en representación desordenada - {name}')
-    plt.grid(True, linestyle='--', alpha=0.7)
-
-    # Guardar y cerrar
-    _save_figure(output_dir, f'unordered_rules_{name}')
-
-    # Visualizar estructura del árbol si está disponible
-    if hasattr(clf, 'tree') and clf.tree is not None:
-        try:
-            from sklearn import tree
-            plt.figure(figsize=(15, 10))
-            feature_names = [f"feat_{i}" for i in clf.selected_features_]
-            tree.plot_tree(clf.tree, filled=True, feature_names=feature_names)
-            plt.title(f'Árbol de decisión - {name}')
-
-            # Guardar y cerrar
-            _save_figure(output_dir, f'unordered_tree_{name}')
-        except Exception as e:
-            print(f"Error al visualizar árbol: {e}")
 
 
 def _visualize_expression_rules(clf, name, output_dir):

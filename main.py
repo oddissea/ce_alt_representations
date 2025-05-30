@@ -4,17 +4,17 @@
 main.py
 
 COMPUTACIÓN EVOLUTIVA
-PEC 4: Script principal CORREGIDO para experimentos de representaciones alternativas
+PEC 4: Script principal para experimentos de representaciones alternativas
 Máster en Investigación en Inteligencia Artificial
 Universidad Nacional de Educación a Distancia (UNED)
 
 Autor: Fernando H. Nasser-Eddine López
 Email: fnassered1@alumno.uned.es
 Fecha: 31/05/2025
-Versión: 2.0 - Corregido
+Versión: 2.0
 
 Descripción:
-    Script principal corregido para la comparación experimental de representaciones
+    Script principal para la comparación experimental de representaciones
     alternativas de reglas en sistemas clasificadores evolutivos.
 
     CORRECCIONES IMPLEMENTADAS:
@@ -395,9 +395,9 @@ def main():
 
     print("\nProceso finalizado.")
     print("\nNOTA: Para ejecutar validaciones específicas de representaciones, usar:")
-    print("  python test/test_expressions_s.py")
-    print("  python test/test_gene_expressions.py")
-    print("  python test/test_all_representations.py")
+    print("  python pruebas/test_expressions_s.py")
+    print("  python pruebas/test_gene_expressions.py")
+    print("  python pruebas/test_all_representations.py")
 
 
 if __name__ == "__main__":

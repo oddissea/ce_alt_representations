@@ -105,7 +105,7 @@ class SmallNeuralRule:
 
             return activation_score, predicted_action, confidence
 
-        except Exception as e:
+        except (ValueError, RuntimeError, AttributeError):
             # Fallback seguro
             return 0.0, 0, 0.0
 
@@ -141,6 +141,22 @@ class SmallNeuralRule:
             self.bias_hidden += np.random.normal(0, mutation_strength / 2, self.bias_hidden.shape)
             self.bias_output += np.random.normal(0, mutation_strength / 2, self.bias_output.shape)
 
+    @staticmethod
+    def _uniform_crossover(parent1_weights, parent2_weights, crossover_prob=0.5):
+        """
+        Aplica cruce uniforme entre dos arrays de pesos.
+
+        Parámetros:
+        - parent1_weights: Pesos del primer padre
+        - parent2_weights: Pesos del segundo padre
+        - crossover_prob: Probabilidad de tomar gen del primer padre
+
+        Retorna:
+        - Array con pesos cruzados
+        """
+        mask = np.random.random(parent1_weights.shape) < crossover_prob
+        return np.where(mask, parent1_weights, parent2_weights)
+
     def crossover(self, other_rule):
         """
         Cruce entre dos reglas para generar descendencia.
@@ -150,23 +166,22 @@ class SmallNeuralRule:
             self.rule_id, self.random_state
         )
 
-        # Cruce uniforme de pesos
-        mask = np.random.random(self.weights_input_hidden.shape) < 0.5
-        child.weights_input_hidden = np.where(
-            mask, self.weights_input_hidden, other_rule.weights_input_hidden
+        # Aplicar cruce uniforme a todos los componentes
+        child.weights_input_hidden = self._uniform_crossover(
+            self.weights_input_hidden, other_rule.weights_input_hidden
         )
 
-        mask = np.random.random(self.weights_hidden_output.shape) < 0.5
-        child.weights_hidden_output = np.where(
-            mask, self.weights_hidden_output, other_rule.weights_hidden_output
+        child.weights_hidden_output = self._uniform_crossover(
+            self.weights_hidden_output, other_rule.weights_hidden_output
         )
 
-        # Cruce de sesgos
-        mask = np.random.random(self.bias_hidden.shape) < 0.5
-        child.bias_hidden = np.where(mask, self.bias_hidden, other_rule.bias_hidden)
+        child.bias_hidden = self._uniform_crossover(
+            self.bias_hidden, other_rule.bias_hidden
+        )
 
-        mask = np.random.random(self.bias_output.shape) < 0.5
-        child.bias_output = np.where(mask, self.bias_output, other_rule.bias_output)
+        child.bias_output = self._uniform_crossover(
+            self.bias_output, other_rule.bias_output
+        )
 
         return child
 
@@ -417,7 +432,7 @@ class NeuralNetworkClassifier(BaseEstimator, ClassifierMixin):
                 for vote, conf in zip(active_votes, active_confidences):
                     vote_counts[vote] = vote_counts.get(vote, 0) + conf
 
-                predicted_class_idx = max(vote_counts.items(), key=lambda x: x[1])[0]
+                predicted_class_idx = max(vote_counts.items(), key=lambda vote_item: vote_item[1])[0]
             else:
                 # Voto mayoritario simple
                 predicted_class_idx = max(set(active_votes), key=active_votes.count)

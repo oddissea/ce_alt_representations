@@ -120,7 +120,7 @@ class GEPChromosome:
         # Cola para procesar nodos que necesitan hijos
         queue = deque()
         if self._gene_objects[0].is_function:
-            queue.append((0, self._gene_objects[0].arity))  # (índice_nodo, hijos_necesarios)
+            queue.append((0, self._gene_objects[0].arity))  # (índice nodo, hijos_necesarios)
 
         # Construir árbol nivel por nivel
         while queue and gene_index < len(self._gene_objects):
@@ -322,7 +322,7 @@ class GEPChromosome:
 
         # Calcular profundidad usando BFS
         max_depth = 1
-        queue = deque([(0, 1)])  # (índice_nodo, profundidad)
+        queue = deque([(0, 1)])  # (índice nodo, profundidad)
 
         while queue:
             node_idx, depth = queue.popleft()
