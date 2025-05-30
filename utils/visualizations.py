@@ -627,3 +627,62 @@ def _visualize_expression_rules(clf, name, output_dir):
 
     # Guardar y cerrar
     _save_figure(output_dir, f'expression_rules_{name}')
+
+
+def _visualize_unordered_rules(clf, name, output_dir):
+    """Visualiza reglas desordenadas evolutivas."""
+
+    # Verificar si es implementación evolutiva o fallback
+    if hasattr(clf, 'using_fallback') and clf.using_fallback:
+        # Comportamiento para fallback RandomForest
+        if hasattr(clf.evolution_engine, 'feature_importances_'):
+            importances = clf.evolution_engine.feature_importances_
+        else:
+            return
+    else:
+        # Comportamiento para cromosomas desordenados evolutivos
+        if hasattr(clf, 'feature_importances_'):
+            importances = clf.feature_importances_
+        else:
+            return
+
+    # Visualizar importancias (código existente compatible)
+    plt.figure(figsize=(12, 6))
+    indices = np.argsort(importances)[::-1]
+    n_features = min(10, len(indices))
+
+    plt.bar(range(n_features), importances[indices[:n_features]])
+    plt.xticks(range(n_features), indices[:n_features])
+    plt.xlabel('Índice de característica')
+    plt.ylabel('Frecuencia en cromosomas')
+    plt.title(f'Genes más frecuentes en cromosomas desordenados - {name}')
+    plt.grid(True, linestyle='--', alpha=0.7)
+
+    _save_figure(output_dir, f'unordered_rules_{name}')
+
+    # Visualización adicional: estructura de cromosomas
+    if hasattr(clf, 'class_rules') and not clf.using_fallback:
+        plt.figure(figsize=(14, 8))
+
+        class_labels = list(clf.class_rules.keys())
+        chromosome_lengths = [rule.length() for rule in clf.class_rules.values()]
+        fitness_scores = [rule.fitness for rule in clf.class_rules.values()]
+
+        # Subplot 1: Longitudes de cromosomas
+        plt.subplot(2, 1, 1)
+        plt.bar(range(len(class_labels)), chromosome_lengths, color='skyblue')
+        plt.xticks(range(len(class_labels)), [f'Clase {c}' for c in class_labels])
+        plt.ylabel('Número de genes')
+        plt.title('Longitud de cromosomas desordenados por clase')
+        plt.grid(True, alpha=0.3)
+
+        # Subplot 2: Fitness por clase
+        plt.subplot(2, 1, 2)
+        plt.bar(range(len(class_labels)), fitness_scores, color='lightcoral')
+        plt.xticks(range(len(class_labels)), [f'Clase {c}' for c in class_labels])
+        plt.ylabel('Fitness evolutivo')
+        plt.title('Fitness de cromosomas evolucionados')
+        plt.grid(True, alpha=0.3)
+
+        plt.tight_layout()
+        _save_figure(output_dir, f'unordered_chromosomes_{name}')

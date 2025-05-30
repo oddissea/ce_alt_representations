@@ -99,7 +99,12 @@ def get_all_classifiers(fuzzy_sets):
         "Hiperelipsoides": HyperEllipsoidClassifier(),
         "EnvolturasConvexas": ConvexHullClassifier(n_components=5, parsimony_weight=0.02),
         "RedNeuronal": NeuralNetworkClassifier(hidden_layer_sizes=(20, 10), max_iter=200),
-        "Desordenado": UnorderedClassifier(max_depth=4),
+        "Desordenado": UnorderedClassifier(
+            population_size=30,
+            generations=20,
+            min_genes=2,
+            max_genes=6
+        ),
         "ExpresionesS": ExpressionsSClassifier(population_size=30, generations=50, max_depth=4),
         "ExpresionesGenes": GeneExpressionsClassifier(population_size=150, generations=8),
         "LogicaDifusa": FuzzyLogicClassifier(n_fuzzy_sets=fuzzy_sets)
@@ -438,6 +443,9 @@ if __name__ == "__main__":
 
     # test específico para hiperelipsoides
     # python main.py --both-datasets -i -ch -nn -u -es -ge -fl
+
+    # test específico para conjuntos desordenados
+    # python main.py --both-datasets -i -he -ch -nn -es -ge -fl
 
     # test específico para redes neuronales
     # python main.py --both-datasets -i -he -ch -u -es -ge -fl
